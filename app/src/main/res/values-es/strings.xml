@@ -29,7 +29,6 @@
     <string name="action_edit">Editar</string>
     <string name="action_delete">Eliminar</string>
 
-    <!-- Settings -->
     <string name="settings_title">Ajustes</string>
     <string name="settings_section_prefs">Preferencias</string>
     <string name="settings_dark">Tema oscuro (placeholder)</string>

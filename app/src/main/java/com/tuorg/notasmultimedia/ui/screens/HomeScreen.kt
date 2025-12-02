@@ -22,10 +22,7 @@ import com.tuorg.notasmultimedia.R
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.ExperimentalMaterial3Api
 
-
-// =========================
-//  Versión MÓVIL (sin cambios funcionales)
-// =========================
+//  Versión MÓVIL
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(nav: NavController, vm: HomeViewModel = viewModel()) {
@@ -56,9 +53,7 @@ fun HomeScreen(nav: NavController, vm: HomeViewModel = viewModel()) {
     }
 }
 
-// =========================
-//  Versión TABLET: lista sola (usa drawer externo + FAB visible)
-// =========================
+//  Versión TABLET
 @Composable
 fun HomeListOnly(
     vm: HomeViewModel = viewModel(),
@@ -76,9 +71,9 @@ fun HomeListOnly(
         items = items,
         onQueryChange = vm::setQuery,
         onTabChange = vm::setTab,
-        onCreateNew = onCreateNew,     // <- vuelve FAB
+        onCreateNew = onCreateNew,
         onOpenDetail = onOpenDetail,
-        showFab = true,                // <- visible en tablet
+        showFab = true,
         onOpenDrawer = onOpenDrawer
     )
 }
@@ -99,7 +94,7 @@ private fun HomeContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.title_home)) },
+                title = { Text(stringResource(R.string.menu_settings)) },
                 navigationIcon = {
                     if (onOpenDrawer != null) {
                         IconButton(onClick = onOpenDrawer) {
@@ -111,7 +106,7 @@ private fun HomeContent(
                     TextField(
                         value = query,
                         onValueChange = onQueryChange,
-                        placeholder = { Text(stringResource(R.string.search_placeholder)) },
+                        placeholder = { Text(stringResource(R.string.menu_settings)) },
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         singleLine = true,
                         modifier = Modifier.width(220.dp)

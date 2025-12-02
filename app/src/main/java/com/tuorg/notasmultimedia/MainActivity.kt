@@ -3,7 +3,7 @@
 package com.tuorg.notasmultimedia
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,14 +32,14 @@ import com.tuorg.notasmultimedia.ui.common.LockLandscapeIf
 import com.tuorg.notasmultimedia.ui.common.isTabletLandscape
 import com.tuorg.notasmultimedia.ui.screens.AppDrawerContent
 import com.tuorg.notasmultimedia.ui.screens.DetailScreenStandalone
-import com.tuorg.notasmultimedia.ui.screens.EditScreen   // <-- usa tu EditScreen ORIGINAL
+import com.tuorg.notasmultimedia.ui.screens.EditScreen
 import com.tuorg.notasmultimedia.ui.screens.HomeListOnly
 import com.tuorg.notasmultimedia.ui.screens.SettingsScreen
 import com.tuorg.notasmultimedia.ui.screens.TabletDetailPlaceholder
 import com.tuorg.notasmultimedia.ui.tablet.TabletHome
 import com.tuorg.notasmultimedia.ui.theme.AppTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.tuorg.notasmultimedia.di.Graph.init(applicationContext)
@@ -54,7 +54,7 @@ fun App() {
         LockLandscapeIf(isTablet)
 
         if (!isTablet) {
-            // Flujo MÓVIL: igual que siempre
+            // --------- Flujo MÓVIL ----------
             val nav = rememberNavController()
             AppNavHost(nav)
             return@AppTheme
@@ -82,24 +82,26 @@ fun App() {
                     }
                 )
             },
-            homePane = { onItemClick, onOpenDrawer, _ ->
+            homePane = { onItemClick, onOpenDrawer, onCreateNew ->
                 HomeListOnly(
                     onOpenDetail = { id ->
                         showSettings = false
-                        selectedId = id
+                        selectedId = id          // para el rightPane
+                        onItemClick(id)          // si luego quieres que TabletHome reaccione
                     },
                     onCreateNew = {
                         showSettings = false
-                        showEditor = true
+                        showEditor = true        // abre el editor en diálogo
+                        onCreateNew()
                     },
                     onOpenDrawer = onOpenDrawer
                 )
             },
             rightPane = {
                 when {
-                    showSettings      -> SettingsScreen()
+                    showSettings -> SettingsScreen { showSettings = false }
                     selectedId != null -> DetailScreenStandalone(id = selectedId!!)
-                    else              -> TabletDetailPlaceholder()
+                    else -> TabletDetailPlaceholder()
                 }
             }
         )
@@ -129,17 +131,30 @@ fun App() {
                                 .padding(pads)
                                 .fillMaxSize()
                         ) {
-                            // NAV "trampa": al hacer popBackStack() desde tu EditScreen,
-                            // volvemos a "done" y ahí cerramos el diálogo.
                             val tmpNav = rememberNavController()
 
                             val backEntry by tmpNav.currentBackStackEntryAsState()
+                            var hasShownEdit by remember { mutableStateOf(false) }
+
+                            // Vigila la ruta para saber cuándo cerrar el diálogo
                             LaunchedEffect(backEntry?.destination?.route) {
-                                if (backEntry?.destination?.route == "done") {
-                                    showEditor = false
+                                when (backEntry?.destination?.route) {
+                                    "edit" -> {
+                                        // Ya mostramos la pantalla de edición al menos una vez
+                                        hasShownEdit = true
+                                    }
+
+                                    "done" -> {
+                                        // Solo cerrar si venimos de "edit"
+                                        if (hasShownEdit) {
+                                            hasShownEdit = false
+                                            showEditor = false
+                                        }
+                                    }
                                 }
                             }
-                            // Entramos a "edit" una sola vez
+
+                            // Entrar a "edit" una sola vez al abrir el diálogo
                             LaunchedEffect(Unit) {
                                 if (tmpNav.currentDestination?.route != "edit") {
                                     tmpNav.navigate("edit")
@@ -150,9 +165,10 @@ fun App() {
                                 navController = tmpNav,
                                 startDestination = "done"
                             ) {
-                                composable("done") { /* vacío; LaunchedEffect cierra */ }
+                                composable("done") { /* vacío; solo se usa para "aterrizar" tras popBackStack */ }
                                 composable("edit") {
-                                    // Tu EditScreen ORIGINAL (no lo cambies)
+                                    // Usa tu EditScreen normalmente.
+                                    // Dentro de EditScreen, al guardar/cancelar, se llama nav.popBackStack()
                                     EditScreen(nav = tmpNav, noteId = null)
                                 }
                             }

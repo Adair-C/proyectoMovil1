@@ -33,7 +33,6 @@ fun EditScreen(
     noteId: String? = null,
     vm: NoteEditViewModel = viewModel(factory = NoteEditViewModel.provideFactory(noteId))
 ) {
-    // ✅ lee el StateFlow correctamente
     val ui by vm.state.collectAsState()
 
     val ctx = LocalContext.current

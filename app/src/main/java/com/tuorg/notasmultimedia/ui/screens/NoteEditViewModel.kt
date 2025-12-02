@@ -17,7 +17,7 @@ data class EditUiState(
     val id: String? = null,
     val title: String = "",
     val description: String = "",
-    // ✅ nuevo campo requerido por NoteEntity
+
     val content: String = "",
     val type: ItemType = ItemType.NOTE,
     val createdAt: LocalDateTime? = null,
@@ -55,7 +55,6 @@ class NoteEditViewModel(
         }
     }
 
-    // setters
     fun setTitle(v: String)       { _state.value = _state.value.copy(title = v) }
     fun setDescription(v: String) { _state.value = _state.value.copy(description = v) }
     fun setContent(v: String)     { _state.value = _state.value.copy(content = v) } // ✅
@@ -72,9 +71,8 @@ class NoteEditViewModel(
             val entity = NoteEntity(
                 id          = id,
                 title       = s.title.trim(),
-                content     = s.content.trim(),         // ✅ ahora sí pasamos content
+                content     = s.content.trim(),
                 type        = s.type,
-                // updatedAt tiene default en NoteEntity; si prefieres: updatedAt = System.currentTimeMillis(),
                 isDeleted   = false,
                 dirty       = false,
                 description = s.description.trim(),

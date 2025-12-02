@@ -15,7 +15,7 @@ object Routes {
     const val HOME = "home"
 
     // Edit
-    const val EDIT = "edit"            // crear nueva
+    const val EDIT = "edit"              // crear nueva
     const val EDIT_WITH_ID = "edit/{id}" // editar existente
 
     // Detail
@@ -61,7 +61,7 @@ fun AppNavHost(navController: NavHostController) {
 
         // Ajustes
         composable(Routes.SETTINGS) {
-            SettingsScreen()
+            SettingsScreen(nav = navController)   // ✅ pasamos el NavController
         }
     }
 }

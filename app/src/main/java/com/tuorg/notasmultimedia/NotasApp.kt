@@ -17,7 +17,6 @@ class NotasApp : Application() {
         super.onCreate()
         Graph.init(this)
 
-        // (Opcional) una corrida única al arrancar
         WorkManager.getInstance(this).enqueueUniqueWork(
             "notes-sync-once",
             ExistingWorkPolicy.KEEP,
@@ -30,7 +29,6 @@ class NotasApp : Application() {
                 .build()
         )
 
-        // (Opcional) trabajo periódico cada 6 horas
         val periodic = PeriodicWorkRequestBuilder<NotesSyncWorker>(6, TimeUnit.HOURS)
             .setConstraints(
                 Constraints.Builder()
