@@ -4,7 +4,20 @@ package com.tuorg.notasmultimedia.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import androidx.compose.foundation.layout.*
+import android.content.Context
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedButton
@@ -12,20 +25,30 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.tuorg.notasmultimedia.BuildConfig
 import com.tuorg.notasmultimedia.model.db.ItemType
+import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.Objects
 
 @Composable
 fun EditScreen(
@@ -34,8 +57,91 @@ fun EditScreen(
     vm: NoteEditViewModel = viewModel(factory = NoteEditViewModel.provideFactory(noteId))
 ) {
     val ui by vm.state.collectAsState()
-
     val ctx = LocalContext.current
+    var tempUri by remember { mutableStateOf<Uri?>(null) }
+
+    // --- Funciones y Launchers para Multimedia ---
+
+    // Crea un Uri temporal para guardar la foto o video capturado
+    fun getUriForFile(context: Context, extension: String): Uri {
+        val file = File.createTempFile(
+            "temp_media_${System.currentTimeMillis()}",
+            extension,
+            context.externalCacheDir
+        )
+        return FileProvider.getUriForFile(
+            Objects.requireNonNull(context),
+            BuildConfig.APPLICATION_ID + ".provider",
+            file
+        )
+    }
+
+    // Launcher para tomar una foto
+    val takePhotoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            tempUri?.let { vm.onMediaSelected(it, "image/jpeg") }
+        }
+    }
+
+    // Launcher para grabar un video
+    val recordVideoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { success ->
+        if (success) {
+            tempUri?.let { vm.onMediaSelected(it, "video/mp4") }
+        }
+    }
+
+    // Launcher para seleccionar imagen/video de la galería (usando el selector de fotos moderno)
+    val pickVisualMediaLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            val mimeType = ctx.contentResolver.getType(uri)
+            vm.onMediaSelected(uri, mimeType)
+        }
+    }
+
+
+    // --- Diálogos ---
+
+    // Diálogo para elegir la fuente de la multimedia
+    if (ui.showMediaPicker) {
+        Dialog(onDismissRequest = { vm.showMediaPicker(false) }) {
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                tonalElevation = 8.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Añadir multimedia", style = MaterialTheme.typography.titleLarge)
+
+                    TextButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        vm.showMediaPicker(false)
+                        val uri = getUriForFile(ctx, ".jpg")
+                        tempUri = uri
+                        takePhotoLauncher.launch(uri)
+                    }) { Text("Tomar foto") }
+
+                    TextButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        vm.showMediaPicker(false)
+                        val uri = getUriForFile(ctx, ".mp4")
+                        tempUri = uri
+                        recordVideoLauncher.launch(uri)
+                    }) { Text("Grabar video") }
+
+                    TextButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        vm.showMediaPicker(false)
+                        pickVisualMediaLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                        )
+                    }) { Text("Elegir de la galería") }
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { vm.showMediaPicker(false) }) {
+                            Text("Cancelar")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     val dueDate = ui.dueAt?.toLocalDate() ?: LocalDate.now()
     val dueTime = ui.dueAt?.toLocalTime() ?: LocalTime.of(9, 0)
 
@@ -64,6 +170,7 @@ fun EditScreen(
         ).show()
     }
 
+    // --- UI Principal de la pantalla ---
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -120,7 +227,7 @@ fun EditScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ElevatedButton(onClick = ::pickDate) { Text("Fecha: $dueDate") }
                     ElevatedButton(onClick = ::pickTime) {
-                        Text("Hora: ${"%02d:%02d".format(dueTime.hour, dueTime.minute)}")
+                        Text("Hora: %02d:%02d".format(dueTime.hour, dueTime.minute))
                     }
                 }
 
@@ -131,14 +238,20 @@ fun EditScreen(
             }
 
             Text(
-                "Adjuntos (próximo): Foto, Video, Archivo, Audio",
+                "Adjuntos",
                 style = MaterialTheme.typography.bodySmall
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ElevatedButton(onClick = { /* TODO */ }) { Text("+ Foto") }
-                ElevatedButton(onClick = { /* TODO */ }) { Text("+ Video") }
+                ElevatedButton(onClick = { vm.showMediaPicker(true) }) { Text("+ Foto/Video") }
                 ElevatedButton(onClick = { /* TODO */ }) { Text("+ Archivo") }
                 ElevatedButton(onClick = { /* TODO */ }) { Text("+ Audio") }
+            }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)){
+                items(ui.attachments){
+                    AsyncImage(model = it.uri, contentDescription = it.description, modifier = Modifier
+                        .size(96.dp)
+                        .clickable { /*TODO: open media*/ })
+                }
             }
         }
     }

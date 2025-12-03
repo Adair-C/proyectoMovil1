@@ -32,7 +32,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 dependencies {
@@ -72,5 +75,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
     implementation("androidx.appcompat:appcompat:1.7.0")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
 }
