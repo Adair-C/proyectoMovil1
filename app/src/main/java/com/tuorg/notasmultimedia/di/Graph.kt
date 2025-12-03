@@ -10,12 +10,16 @@ import com.tuorg.notasmultimedia.data.local.LocalNoteDataSource
 import com.tuorg.notasmultimedia.data.remote.RemoteNoteDataSource
 import com.tuorg.notasmultimedia.data.sync.SyncStateStore
 import com.tuorg.notasmultimedia.model.db.AppDatabase
+import android.content.ContentResolver
 
 object Graph {
     lateinit var db: AppDatabase
         private set
 
     lateinit var notes: NoteRepository
+        private set
+
+    lateinit var contentResolver: ContentResolver
         private set
 
     private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -35,6 +39,7 @@ object Graph {
     }
 
     fun init(context: Context) {
+        contentResolver = context.contentResolver
         db = Room.databaseBuilder(context, AppDatabase::class.java, "app.db")
             .addMigrations(MIGRATION_1_2)
             .build()
@@ -46,4 +51,3 @@ object Graph {
         notes = DefaultNoteRepository(local, remote, db, syncState)
     }
 }
-

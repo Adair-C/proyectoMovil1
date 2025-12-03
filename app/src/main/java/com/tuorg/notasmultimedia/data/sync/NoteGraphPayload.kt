@@ -14,11 +14,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-/**
- * Payload sin dependencias externas (org.json).
- * Por ahora serializamos SOLO la nota; adjuntos y recordatorios van vacíos hasta
- * que tengamos los nombres exactos de sus campos en tus entidades.
- */
+
 
 data class NoteSlim(
     val id: String,

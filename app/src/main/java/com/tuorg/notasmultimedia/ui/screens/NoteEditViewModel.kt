@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.util.UUID
+import android.content.Intent
+
 
 data class EditUiState(
     val id: String, // ID ya no es nullable, siempre tendrá un valor
@@ -35,6 +37,7 @@ class NoteEditViewModel(
 ) : ViewModel() {
 
     private val repo = Graph.notes
+    private val contentResolver = Graph.contentResolver
 
     // ID estable para la sesión de edición. O el que llega, o uno nuevo.
     private val stableNoteId = noteId ?: UUID.randomUUID().toString()
@@ -76,6 +79,9 @@ class NoteEditViewModel(
     fun showMediaPicker(show: Boolean) { _state.value = _state.value.copy(showMediaPicker = show) }
 
     fun onMediaSelected(uri: Uri, mimeType: String?) {
+        // ¡LA SOLUCIÓN! Tomamos el permiso persistente para la URI
+        contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
         val attachmentType = when {
             mimeType?.startsWith("image") == true -> AttachmentType.IMAGE
             mimeType?.startsWith("video") == true -> AttachmentType.VIDEO
@@ -93,6 +99,10 @@ class NoteEditViewModel(
             attachments = _state.value.attachments + newAttachment,
             showMediaPicker = false
         )
+    }
+
+    fun onAttachmentRemoved(attachment: AttachmentEntity) {
+        _state.value = _state.value.copy(attachments = _state.value.attachments.filterNot { it.uri == attachment.uri })
     }
 
     fun save(onSaved: () -> Unit) {
