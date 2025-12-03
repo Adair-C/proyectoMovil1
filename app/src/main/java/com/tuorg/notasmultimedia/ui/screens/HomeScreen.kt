@@ -91,6 +91,17 @@ private fun HomeContent(
     showFab: Boolean,
     onOpenDrawer: (() -> Unit)?
 ) {
+    // --- LA SOLUCIÓN ---
+    // Filtramos la lista de items basándonos en la pestaña seleccionada (tab).
+    // remember se asegura de que el filtro no se ejecute en cada recomposición, solo si cambian los items o la tab.
+    val filteredItems = remember(items, tab) {
+        when (tab) {
+            1 -> items.filter { it.note.type == ItemType.TASK } // Pestaña "Tareas"
+            2 -> items.filter { it.note.type == ItemType.NOTE } // Pestaña "Notas"
+            else -> items // Pestaña "Todas"
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -133,18 +144,19 @@ private fun HomeContent(
                 }
             }
             LazyColumn(Modifier.fillMaxSize().padding(8.dp)) {
-                items(items) { it ->
+                // Usamos la nueva lista filtrada en lugar de la original
+                items(filteredItems) { it ->
                     ElevatedCard(
                         onClick = { onOpenDetail(it.note.id) },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     ) {
                         Column(Modifier.padding(12.dp)) {
                             Text(
-                                if (it.note.type == ItemType.TASK) "🗓 ${it.note.title}" else it.note.title,
+                                text = if (it.note.type == ItemType.TASK) "🗓 ${it.note.title}" else it.note.title,
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                it.note.description.take(80),
+                                text = it.note.description.take(80),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
