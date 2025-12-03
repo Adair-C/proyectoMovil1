@@ -144,7 +144,7 @@ private fun HomeContent(
                 }
             }
             LazyColumn(Modifier.fillMaxSize().padding(8.dp)) {
-                // Usamos la nueva lista filtrada en lugar de la original
+
                 items(filteredItems) { it ->
                     ElevatedCard(
                         onClick = { onOpenDetail(it.note.id) },
