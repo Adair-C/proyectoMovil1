@@ -17,7 +17,8 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 data class EditUiState(
-    val id: String? = null,
+    val id: String, // ID ya no es nullable, siempre tendrá un valor
+    val isNewNote: Boolean = true,
     val title: String = "",
     val description: String = "",
     val content: String = "",
@@ -30,22 +31,27 @@ data class EditUiState(
 )
 
 class NoteEditViewModel(
-    private val noteId: String?,
+    noteId: String?, // ID que llega desde la navegación, puede ser null
 ) : ViewModel() {
 
     private val repo = Graph.notes
 
-    private val _state = MutableStateFlow(EditUiState())
+    // ID estable para la sesión de edición. O el que llega, o uno nuevo.
+    private val stableNoteId = noteId ?: UUID.randomUUID().toString()
+
+    private val _state = MutableStateFlow(EditUiState(id = stableNoteId, isNewNote = noteId == null))
     val state = _state.asStateFlow()
 
     init {
-        if (!noteId.isNullOrBlank()) {
+        // Si el noteId NO es nulo, significa que estamos editando una nota existente.
+        // Por lo tanto, cargamos sus datos.
+        if (noteId != null) {
             viewModelScope.launch {
-                val existing = repo.byId(noteId).firstOrNull()
-                existing?.let { nwr ->
+                repo.byId(noteId).firstOrNull()?.let { nwr ->
                     val n = nwr.note
                     _state.value = EditUiState(
                         id = n.id,
+                        isNewNote = false,
                         title = n.title,
                         description = n.description,
                         content = n.content,
@@ -73,11 +79,12 @@ class NoteEditViewModel(
         val attachmentType = when {
             mimeType?.startsWith("image") == true -> AttachmentType.IMAGE
             mimeType?.startsWith("video") == true -> AttachmentType.VIDEO
-            else -> return // No se admite este tipo de archivo por ahora
+            else -> return // Tipo de archivo no soportado
         }
 
+        // El adjunto se crea directamente con la ID correcta y estable.
         val newAttachment = AttachmentEntity(
-            noteId = state.value.id ?: "", // Se corregirá al guardar
+            noteId = stableNoteId,
             type = attachmentType,
             uri = uri.toString(),
             description = null
@@ -88,31 +95,32 @@ class NoteEditViewModel(
         )
     }
 
-
     fun save(onSaved: () -> Unit) {
         viewModelScope.launch {
             val s   = _state.value
             val now = LocalDateTime.now()
-            val id  = s.id ?: UUID.randomUUID().toString()
+
+            // LA VERDAD DE Entities.kt: updatedAt es Long, createdAt es LocalDateTime.
+            // Creamos las variables con los tipos correctos que pide el constructor de NoteEntity.
+            val updatedAtAsLong = System.currentTimeMillis()
 
             val entity = NoteEntity(
-                id          = id,
+                id          = s.id,
                 title       = s.title.trim(),
                 content     = s.content.trim(),
                 type        = s.type,
                 isDeleted   = false,
-                dirty       = false,
+                dirty       = true,
                 description = s.description.trim(),
-                createdAt   = s.createdAt ?: now,
-                dueAt       = if (s.type == ItemType.TASK) s.dueAt else null,
+                createdAt   = s.createdAt ?: now, // Se pasa LocalDateTime (Correcto)
+                updatedAt   = updatedAtAsLong,    // Se pasa Long (Correcto)
+                dueAt       = if (s.type == ItemType.TASK) s.dueAt else null, // Se pasa LocalDateTime? (Correcto)
                 completed   = if (s.type == ItemType.TASK) s.completed else false
             )
 
-            val attachmentsWithNoteId = s.attachments.map { it.copy(noteId = id) }
-
             repo.upsertGraph(
                 note = entity,
-                attachments = attachmentsWithNoteId,
+                attachments = s.attachments,
                 reminders = emptyList() //TODO: Guardar recordatorios
             )
             onSaved()
