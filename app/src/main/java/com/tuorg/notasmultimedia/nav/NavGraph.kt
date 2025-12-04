@@ -9,7 +9,10 @@ import androidx.navigation.navArgument
 import com.tuorg.notasmultimedia.ui.screens.DetailScreen
 import com.tuorg.notasmultimedia.ui.screens.EditScreen
 import com.tuorg.notasmultimedia.ui.screens.HomeScreen
+import com.tuorg.notasmultimedia.ui.screens.MediaViewerScreen
 import com.tuorg.notasmultimedia.ui.screens.SettingsScreen
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 object Routes {
     const val HOME = "home"
@@ -20,6 +23,9 @@ object Routes {
 
     // Detail
     const val DETAIL = "detail/{id}"
+
+    // Media Viewer
+    const val MEDIA_VIEWER = "viewer" // CORREGIDO: Ruta base para el visor
 
     // Settings
     const val SETTINGS = "settings"
@@ -59,9 +65,20 @@ fun AppNavHost(navController: NavHostController) {
             DetailScreen(nav = navController, id = id)
         }
 
+        // Visor de Media
+        composable(
+            route = "${Routes.MEDIA_VIEWER}/{uri}", // CORREGIDO: Ruta completa con argumento
+            arguments = listOf(navArgument("uri") { type = NavType.StringType })
+        ) { backStack ->
+            // ¡LA SOLUCIÓN! Decodificamos la URI para restaurar su valor original
+            val encodedUri = backStack.arguments?.getString("uri") ?: ""
+            val uri = URLDecoder.decode(encodedUri, StandardCharsets.UTF_8.toString())
+            MediaViewerScreen(uri = uri, onBackPressed = { navController.popBackStack() })
+        }
+
         // Ajustes
         composable(Routes.SETTINGS) {
-            SettingsScreen(nav = navController)   // ✅ pasamos el NavController
+            SettingsScreen(nav = navController)
         }
     }
 }

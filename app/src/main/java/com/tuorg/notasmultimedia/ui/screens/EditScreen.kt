@@ -5,7 +5,6 @@ package com.tuorg.notasmultimedia.ui.screens
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -53,9 +52,11 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.tuorg.notasmultimedia.BuildConfig
 import com.tuorg.notasmultimedia.model.db.AttachmentEntity
-import com.tuorg.notasmultimedia.model.db.AttachmentType
 import com.tuorg.notasmultimedia.model.db.ItemType
+import com.tuorg.notasmultimedia.nav.Routes
 import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -183,7 +184,11 @@ fun EditScreen(
                 ElevatedButton(onClick = { /* TODO */ }) { Text("+ Audio") }
             }
 
-            Attachments(attachments = ui.attachments, onRemove = vm::onAttachmentRemoved)
+            Attachments(
+                attachments = ui.attachments,
+                onRemove = vm::onAttachmentRemoved,
+                nav = nav // <-- Pasamos el NavController
+            )
         }
     }
 }
@@ -192,10 +197,9 @@ fun EditScreen(
 private fun Attachments(
     attachments: List<AttachmentEntity>,
     onRemove: (AttachmentEntity) -> Unit,
+    nav: NavController, // <-- Recibimos el NavController
     modifier: Modifier = Modifier
 ) {
-    val ctx = LocalContext.current
-
     if (attachments.isEmpty()) {
         Text(
             text = "No hay adjuntos",
@@ -216,17 +220,9 @@ private fun Attachments(
                         modifier = Modifier
                             .size(96.dp)
                             .clickable {
-                                val intent = Intent(Intent.ACTION_VIEW)
-                                val uri = Uri.parse(attachment.uri)
-                                val mimeType = if (attachment.type == AttachmentType.VIDEO) "video/*" else "image/*"
-
-                                intent.setDataAndType(uri, mimeType)
-                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                try {
-                                    ctx.startActivity(intent)
-                                } catch (e: Exception) {
-                                    // Opcional: Mostrar Toast si no hay app para abrir el archivo
-                                }
+                                // ¡LA SOLUCIÓN! Codificamos la URI para que sea segura para la navegación
+                                val encodedUri = URLEncoder.encode(attachment.uri, StandardCharsets.UTF_8.toString())
+                                nav.navigate("${Routes.MEDIA_VIEWER}/$encodedUri")
                             }
                     )
                     IconButton(
